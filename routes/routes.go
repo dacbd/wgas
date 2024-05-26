@@ -19,6 +19,7 @@ func logging(next http.Handler) http.Handler {
 
 func AddRoutes(mux *http.ServeMux) {
 	mux.Handle("GET /status", logging(statusCheck()))
+	mux.Handle("GET /webhook", logging(handleGithubEvent([]byte("temp"))))
 }
 
 func statusCheck() http.Handler {
