@@ -1,6 +1,6 @@
 # wgas 
 
-> [!WARN]
+> [!WARNING]
 > Work in progress
 
 ## Libraries
