@@ -1,13 +1,56 @@
 package routes
 
-import "net/http"
+import (
+	"fmt"
+	"net/http"
+	"time"
+
+	"github.com/google/go-github/v62/github"
+	"github.com/rs/zerolog/log"
+)
+
+func logging(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		start := time.Now()
+		next.ServeHTTP(w, r)
+		log.Info().Dur("response_time", time.Since(start)).Str("method", r.Method).Str("path", r.URL.Path).Msg("")
+	})
+}
 
 func AddRoutes(mux *http.ServeMux) {
-	mux.HandleFunc("GET /", func(w http.ResponseWriter, r *http.Request) {
-		w.Write([]byte("hello"))
-	})
-	mux.HandleFunc("GET /status", func(w http.ResponseWriter, r *http.Request) {
+	mux.Handle("GET /status", logging(statusCheck()))
+}
+
+func statusCheck() http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
-		w.Write([]byte("ok"))
+		w.Write([]byte("ok\n"))
+	})
+}
+
+func handleGithubEvent(githubSecret []byte) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		payload, err := github.ValidatePayload(r, githubSecret)
+		if err != nil {
+			log.Warn().Err(err).Msg("failed to validate github payload")
+			w.WriteHeader(http.StatusBadRequest)
+		}
+		githubEvent := github.WebHookType(r)
+		event, err := github.ParseWebHook(githubEvent, payload)
+		if err != nil {
+			log.Err(err).Msg("failed to Parse github payload")
+			w.WriteHeader(http.StatusBadRequest)
+		}
+
+		switch e := event.(type) {
+		case *github.WorkflowJobEvent:
+			log.Info().Msg(fmt.Sprintf("WorkflowJobEvent, status: %s", *e.WorkflowJob.Status))
+		case *github.WorkflowRunEvent:
+			log.Info().Msg("WorkflowRunEvent")
+		case *github.WorkflowDispatchEvent:
+			log.Info().Msg("WorkflowDispatchEvent")
+		default:
+			log.Info().Msg("")
+		}
 	})
 }
