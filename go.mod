@@ -1,4 +1,4 @@
-module github.com/dacbd/gaa
+module github.com/dacbd/wgas
 
 go 1.22.2
 

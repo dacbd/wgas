@@ -12,7 +12,7 @@ import (
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 
-	"github.com/dacbd/gaa/server"
+	"github.com/dacbd/wgas/server"
 )
 
 func main() {

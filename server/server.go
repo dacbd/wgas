@@ -1,7 +1,7 @@
 package server
 
 import (
-	"github.com/dacbd/gaa/routes"
+	"github.com/dacbd/wgas/routes"
 	"net/http"
 )
 
