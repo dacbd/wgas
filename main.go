@@ -4,18 +4,20 @@ import (
 	"context"
 	"fmt"
 	"io"
-	"log"
 	"net/http"
 	"os"
 	"os/signal"
 	"sync"
 	"time"
 
+	"github.com/rs/zerolog"
+	"github.com/rs/zerolog/log"
+
 	"github.com/dacbd/gaa/server"
 )
 
 func main() {
-	log.Println("hello world")
+	log.Info().Msg("gaa spin up")
 	ctx := context.Background()
 	if err := run(ctx, os.Stdout, os.Args); err != nil {
 		fmt.Fprintf(os.Stderr, "%s\n", err)
@@ -26,6 +28,7 @@ func main() {
 func run(ctx context.Context, w io.Writer, _args []string) error {
 	ctx, cancel := signal.NotifyContext(ctx, os.Interrupt)
 	defer cancel()
+	zerolog.TimeFieldFormat = zerolog.TimeFormatUnix
 
 	srv := server.NewServer()
 	server := http.Server{
@@ -33,9 +36,9 @@ func run(ctx context.Context, w io.Writer, _args []string) error {
 		Handler: srv,
 	}
 	go func() {
-		log.Printf("listening on %s\n", server.Addr)
+		log.Info().Msg(fmt.Sprintf("listening: %s", server.Addr))
 		if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
-			fmt.Fprintf(os.Stderr, "error listening and serving: %s\n", err)
+			log.Error().Msg(fmt.Sprintf("error listening and serving: %s", err))
 		}
 	}()
 	var wg sync.WaitGroup
@@ -47,7 +50,7 @@ func run(ctx context.Context, w io.Writer, _args []string) error {
 		shutdownCtx, cancel := context.WithTimeout(ctx, 10*time.Second)
 		defer cancel()
 		if err := server.Shutdown(shutdownCtx); err != nil {
-			fmt.Fprintf(os.Stderr, "error shutting down http server: %s\n", err)
+			log.Error().Msg(fmt.Sprintf("error shutting down http server: %s", err))
 		}
 	}()
 	wg.Wait()
