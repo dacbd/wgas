@@ -7,6 +7,8 @@ import (
 
 	"github.com/google/go-github/v62/github"
 	"github.com/rs/zerolog/log"
+
+	"github.com/dacbd/wgas/events"
 )
 
 func logging(next http.Handler) http.Handler {
@@ -45,11 +47,20 @@ func handleGithubEvent(githubSecret []byte) http.Handler {
 
 		switch e := event.(type) {
 		case *github.WorkflowJobEvent:
-			log.Info().Msg(fmt.Sprintf("WorkflowJobEvent, status: %s", *e.WorkflowJob.Status))
+			err := events.HandleWorkflowJob(e.WorkflowJob)
+			if err != nil {
+				log.Err(err).Msg("failed processing job event")
+			}
+			w.WriteHeader(http.StatusOK)
 		case *github.WorkflowRunEvent:
-			log.Info().Msg("WorkflowRunEvent")
+			err := events.HandleWorkflowRun(e.WorkflowRun)
+			if err != nil {
+				log.Err(err).Msg("failed processing run event")
+			}
+			w.WriteHeader(http.StatusOK)
 		case *github.WorkflowDispatchEvent:
-			log.Info().Msg("WorkflowDispatchEvent")
+			log.Info().Msg(fmt.Sprintf("WorkflowDispatchEvent: %s", *e.Workflow))
+			w.WriteHeader(http.StatusOK)
 		default:
 			log.Info().Msg("")
 		}
